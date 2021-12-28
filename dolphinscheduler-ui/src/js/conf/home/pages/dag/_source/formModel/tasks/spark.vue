@@ -20,10 +20,11 @@
       <div slot="text">{{$t('Program Type')}}</div>
       <div slot="content">
         <el-select
-                style="width: 130px;"
-                size="small"
-                v-model="programType"
-                :disabled="isDetails">
+          style="width: 130px;"
+          size="small"
+          v-model="programType"
+          :disabled="isDetails"
+          @change="programTypeChange">
           <el-option
                   v-for="city in programTypeList"
                   :key="city.code"
@@ -63,9 +64,9 @@
       </div>
     </m-list-box>
     <m-list-box>
-      <div slot="text">{{$t('Main Jar Package')}}</div>
+      <div slot="text">{{$t('Main Package')}}</div>
       <div slot="content">
-        <treeselect v-model="mainJar" maxHeight="200" :options="mainJarLists" :disable-branch-nodes="true" :normalizer="normalizer" :disabled="isDetails" :placeholder="$t('Please enter main jar package')">
+        <treeselect v-model="mainJar" maxHeight="200" :options="mainJarLists" :disable-branch-nodes="true" :normalizer="normalizer" :disabled="isDetails" :placeholder="$t('Please enter main package')">
           <div slot="value-label" slot-scope="{ node }">{{ node.raw.fullName }}</div>
         </treeselect>
       </div>
@@ -205,6 +206,9 @@
   import '@riophae/vue-treeselect/dist/vue-treeselect.css'
   import disabledState from '@/module/mixin/disabledState'
   import Clipboard from 'clipboard'
+  import { diGuiTree, searchTree } from './_source/resourceTree'
+  import { mapActions } from 'vuex'
+
   export default {
     name: 'spark',
     data () {
@@ -263,6 +267,17 @@
     },
     mixins: [disabledState],
     methods: {
+      ...mapActions('dag', ['getResourcesListJar']),
+      programTypeChange () {
+        this.mainJar = null
+        this.mainClass = ''
+      },
+      getTargetResourcesListJar (programType) {
+        this.getResourcesListJar(programType).then(res => {
+          diGuiTree(res)
+          this.mainJarLists = res
+        })
+      },
       _copyPath (e, node) {
         e.stopPropagation()
         let clipboard = new Clipboard('.copy-path', {
@@ -313,40 +328,14 @@
       _onCacheResourcesData (a) {
         this.cacheResourceList = a
       },
-      diGuiTree (item) { // Recursive convenience tree structure
-        item.forEach(item => {
-          item.children === '' || item.children === undefined || item.children === null || item.children.length === 0
-            ? this.operationTree(item) : this.diGuiTree(item.children)
-        })
-      },
-      operationTree (item) {
-        if (item.dirctory) {
-          item.isDisabled = true
-        }
-        delete item.children
-      },
-      searchTree (element, id) {
-        // 根据id查找节点
-        if (element.id === id) {
-          return element
-        } else if (element.children !== null) {
-          let i
-          let result = null
-          for (i = 0; result === null && i < element.children.length; i++) {
-            result = this.searchTree(element.children[i], id)
-          }
-          return result
-        }
-        return null
-      },
       dataProcess (backResource) {
         let isResourceId = []
         let resourceIdArr = []
         if (this.resourceList.length > 0) {
           this.resourceList.forEach(v => {
             this.mainJarList.forEach(v1 => {
-              if (this.searchTree(v1, v)) {
-                isResourceId.push(this.searchTree(v1, v))
+              if (searchTree(v1, v)) {
+                isResourceId.push(searchTree(v1, v))
               }
             })
           })
@@ -396,7 +385,7 @@
         }
 
         if (!this.mainJar) {
-          this.$message.warning(`${i18n.$t('Please enter main jar package')}`)
+          this.$message.warning(`${i18n.$t('Please enter main package')}`)
           return false
         }
 
@@ -493,9 +482,7 @@
     watch: {
       // Listening type
       programType (type) {
-        if (type === 'PYTHON') {
-          this.mainClass = ''
-        }
+        this.getTargetResourcesListJar(type)
       },
       // Watch the cacheParams
       cacheParams (val) {
@@ -521,8 +508,8 @@
         if (this.resourceList.length > 0) {
           this.resourceList.forEach(v => {
             this.mainJarList.forEach(v1 => {
-              if (this.searchTree(v1, v)) {
-                isResourceId.push(this.searchTree(v1, v))
+              if (searchTree(v1, v)) {
+                isResourceId.push(searchTree(v1, v))
               }
             })
           })
@@ -555,10 +542,11 @@
       }
     },
     created () {
+      this.getTargetResourcesListJar(this.programType)
       let item = this.store.state.dag.resourcesListS
       let items = this.store.state.dag.resourcesListJar
-      this.diGuiTree(item)
-      this.diGuiTree(items)
+      diGuiTree(item)
+      diGuiTree(items)
       this.mainJarList = item
       this.mainJarLists = items
       let o = this.backfillItem
@@ -615,9 +603,6 @@
           this.localParams = localParams
         }
       }
-    },
-    mounted () {
-
     },
     components: { mLocalParams, mListBox, mList4Box, Treeselect }
   }

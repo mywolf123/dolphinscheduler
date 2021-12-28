@@ -27,14 +27,112 @@ import java.util.Map;
 public interface ProcessTaskRelationService {
 
     /**
-     * query process task relation
+     * create process task relation
      *
      * @param loginUser login user
-     * @param projectName project name
-     * @param processDefinitionCode process definition code
+     * @param projectCode project code
+     * @param processDefinitionCode processDefinitionCode
+     * @param preTaskCode preTaskCode
+     * @param postTaskCode postTaskCode
+     * @return create result code
      */
-    Map<String, Object> queryProcessTaskRelation(User loginUser,
-                                                 String projectName,
-                                                 Long processDefinitionCode);
-}
+    Map<String, Object> createProcessTaskRelation(User loginUser,
+                                                  long projectCode,
+                                                  long processDefinitionCode,
+                                                  long preTaskCode,
+                                                  long postTaskCode);
 
+    /**
+     * move task to other processDefinition
+     *
+     * @param loginUser login user info
+     * @param projectCode project code
+     * @param processDefinitionCode process definition code
+     * @param targetProcessDefinitionCode target process definition code
+     * @param taskCode the current task code (the post task code)
+     * @return move result code
+     */
+    Map<String, Object> moveTaskProcessRelation(User loginUser,
+                                                long projectCode,
+                                                long processDefinitionCode,
+                                                long targetProcessDefinitionCode,
+                                                long taskCode);
+
+    /**
+     * delete process task relation
+     *
+     * @param loginUser login user
+     * @param projectCode project code
+     * @param processDefinitionCode process definition code
+     * @param taskCode the post task code
+     * @return delete result code
+     */
+    Map<String, Object> deleteTaskProcessRelation(User loginUser,
+                                                  long projectCode,
+                                                  long processDefinitionCode,
+                                                  long taskCode);
+
+    /**
+     * delete task upstream relation
+     *
+     * @param loginUser login user
+     * @param projectCode project code
+     * @param preTaskCodes the pre task codes, sep ','
+     * @param taskCode the post task code
+     * @return delete result code
+     */
+    Map<String, Object> deleteUpstreamRelation(User loginUser,
+                                               long projectCode,
+                                               String preTaskCodes,
+                                               long taskCode);
+
+    /**
+     * delete task downstream relation
+     *
+     * @param loginUser login user
+     * @param projectCode project code
+     * @param postTaskCodes the post task codes, sep ','
+     * @param taskCode the pre task code
+     * @return delete result code
+     */
+    Map<String, Object> deleteDownstreamRelation(User loginUser,
+                                                 long projectCode,
+                                                 String postTaskCodes,
+                                                 long taskCode);
+
+    /**
+     * query task upstream relation
+     *
+     * @param loginUser login user
+     * @param projectCode project code
+     * @param taskCode current task code (post task code)
+     * @return process task relation list
+     */
+    Map<String, Object> queryUpstreamRelation(User loginUser,
+                                              long projectCode,
+                                              long taskCode);
+
+    /**
+     * query task downstream relation
+     *
+     * @param loginUser login user
+     * @param projectCode project code
+     * @param taskCode pre task code
+     * @return process task relation list
+     */
+    Map<String, Object> queryDownstreamRelation(User loginUser,
+                                                long projectCode,
+                                                long taskCode);
+
+    /**
+     * delete edge
+     *
+     * @param loginUser             login user
+     * @param projectCode           project code
+     * @param processDefinitionCode process definition code
+     * @param preTaskCode pre task code
+     * @param postTaskCode post task code
+     * @return delete result code
+     */
+    Map<String, Object> deleteEdge(User loginUser, long projectCode, long processDefinitionCode, long preTaskCode, long postTaskCode);
+}

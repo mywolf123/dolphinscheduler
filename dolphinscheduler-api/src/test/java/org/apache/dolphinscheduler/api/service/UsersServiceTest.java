@@ -26,15 +26,14 @@ import org.apache.dolphinscheduler.api.service.impl.UsersServiceImpl;
 import org.apache.dolphinscheduler.api.utils.PageInfo;
 import org.apache.dolphinscheduler.api.utils.Result;
 import org.apache.dolphinscheduler.common.Constants;
-import org.apache.dolphinscheduler.common.enums.ResourceType;
 import org.apache.dolphinscheduler.common.enums.UserType;
-import org.apache.dolphinscheduler.common.utils.CollectionUtils;
 import org.apache.dolphinscheduler.common.utils.EncryptionUtils;
 import org.apache.dolphinscheduler.dao.entity.AlertGroup;
 import org.apache.dolphinscheduler.dao.entity.Project;
 import org.apache.dolphinscheduler.dao.entity.Resource;
 import org.apache.dolphinscheduler.dao.entity.Tenant;
 import org.apache.dolphinscheduler.dao.entity.User;
+import org.apache.dolphinscheduler.dao.mapper.AccessTokenMapper;
 import org.apache.dolphinscheduler.dao.mapper.AlertGroupMapper;
 import org.apache.dolphinscheduler.dao.mapper.DataSourceUserMapper;
 import org.apache.dolphinscheduler.dao.mapper.ProjectMapper;
@@ -44,6 +43,9 @@ import org.apache.dolphinscheduler.dao.mapper.ResourceUserMapper;
 import org.apache.dolphinscheduler.dao.mapper.TenantMapper;
 import org.apache.dolphinscheduler.dao.mapper.UDFUserMapper;
 import org.apache.dolphinscheduler.dao.mapper.UserMapper;
+import org.apache.dolphinscheduler.spi.enums.ResourceType;
+
+import org.apache.commons.collections.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +70,7 @@ import com.google.common.collect.Lists;
 /**
  * users service test
  */
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(MockitoJUnitRunner.Silent.class)
 public class UsersServiceTest {
 
     private static final Logger logger = LoggerFactory.getLogger(UsersServiceTest.class);
@@ -78,6 +80,9 @@ public class UsersServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private AccessTokenMapper accessTokenMapper;
 
     @Mock
     private TenantMapper tenantMapper;
@@ -221,7 +226,6 @@ public class UsersServiceTest {
         Assert.assertEquals(user.getId(), userExistId);
     }
 
-
     @Test
     public void testQueryUserList() {
         User user = new User();
@@ -247,16 +251,16 @@ public class UsersServiceTest {
         when(userMapper.queryUserPaging(any(Page.class), eq("userTest"))).thenReturn(page);
 
         //no operate
-        Map<String, Object> result = usersService.queryUserList(user, "userTest", 1, 10);
+        Result result = usersService.queryUserList(user, "userTest", 1, 10);
         logger.info(result.toString());
-        Assert.assertEquals(Status.USER_NO_OPERATION_PERM, result.get(Constants.STATUS));
+        Assert.assertEquals(Status.USER_NO_OPERATION_PERM.getCode(), (int) result.getCode());
 
         //success
         user.setUserType(UserType.ADMIN_USER);
         result = usersService.queryUserList(user, "userTest", 1, 10);
-        Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
-        PageInfo<User> pageInfo = (PageInfo<User>) result.get(Constants.DATA_LIST);
-        Assert.assertTrue(pageInfo.getLists().size() > 0);
+        Assert.assertEquals(Status.SUCCESS.getCode(), (int) result.getCode());
+        PageInfo<User> pageInfo = (PageInfo<User>) result.getData();
+        Assert.assertTrue(pageInfo.getTotalList().size() > 0);
     }
 
     @Test
@@ -265,13 +269,13 @@ public class UsersServiceTest {
         String userPassword = "userTest0001";
         try {
             //user not exist
-            Map<String, Object> result = usersService.updateUser(getLoginUser(), 0,userName,userPassword,"3443@qq.com",1,"13457864543","queue", 1);
+            Map<String, Object> result = usersService.updateUser(getLoginUser(), 0, userName, userPassword, "3443@qq.com", 1, "13457864543", "queue", 1);
             Assert.assertEquals(Status.USER_NOT_EXIST, result.get(Constants.STATUS));
             logger.info(result.toString());
 
             //success
             when(userMapper.selectById(1)).thenReturn(getUser());
-            result = usersService.updateUser(getLoginUser(), 1,userName,userPassword,"32222s@qq.com",1,"13457864543","queue", 1);
+            result = usersService.updateUser(getLoginUser(), 1, userName, userPassword, "32222s@qq.com", 1, "13457864543", "queue", 1);
             logger.info(result.toString());
             Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
         } catch (Exception e) {
@@ -286,7 +290,7 @@ public class UsersServiceTest {
         try {
             when(userMapper.queryTenantCodeByUserId(1)).thenReturn(getUser());
             when(userMapper.selectById(1)).thenReturn(getUser());
-
+            when(accessTokenMapper.deleteAccessTokenByUserId(1)).thenReturn(0);
             //no operate
             Map<String, Object> result = usersService.deleteUserById(loginUser, 3);
             logger.info(result.toString());
@@ -335,6 +339,74 @@ public class UsersServiceTest {
     }
 
     @Test
+    public void testGrantProjectByCode() {
+        // Mock Project, User
+        final long projectCode = 1L;
+        final int projectCreator = 1;
+        final int authorizer = 100;
+        Mockito.when(this.userMapper.selectById(authorizer)).thenReturn(this.getUser());
+        Mockito.when(this.userMapper.selectById(projectCreator)).thenReturn(this.getUser());
+        Mockito.when(this.projectMapper.queryByCode(projectCode)).thenReturn(this.getProject());
+
+        // ERROR: USER_NOT_EXIST
+        User loginUser = new User();
+        Map<String, Object> result = this.usersService.grantProjectByCode(loginUser, 999, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.USER_NOT_EXIST, result.get(Constants.STATUS));
+
+        // ERROR: PROJECT_NOT_FOUNT
+        result = this.usersService.grantProjectByCode(loginUser, authorizer, 999);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.PROJECT_NOT_FOUND, result.get(Constants.STATUS));
+
+        // ERROR: USER_NO_OPERATION_PERM
+        loginUser.setId(999);
+        loginUser.setUserType(UserType.GENERAL_USER);
+        result = this.usersService.grantProjectByCode(loginUser, authorizer, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.USER_NO_OPERATION_PERM, result.get(Constants.STATUS));
+
+        // SUCCESS: USER IS PROJECT OWNER
+        loginUser.setId(projectCreator);
+        loginUser.setUserType(UserType.GENERAL_USER);
+        result = this.usersService.grantProjectByCode(loginUser, authorizer, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
+
+        // SUCCESS: USER IS ADMINISTRATOR
+        loginUser.setId(999);
+        loginUser.setUserType(UserType.ADMIN_USER);
+        result = this.usersService.grantProjectByCode(loginUser, authorizer, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
+    }
+
+    @Test
+    public void testRevokeProject() {
+        Mockito.when(this.userMapper.selectById(1)).thenReturn(this.getUser());
+
+        final long projectCode = 3682329499136L;
+
+        // user no permission
+        User loginUser = new User();
+        Map<String, Object> result = this.usersService.revokeProject(loginUser, 1, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.USER_NO_OPERATION_PERM, result.get(Constants.STATUS));
+
+        // user not exist
+        loginUser.setUserType(UserType.ADMIN_USER);
+        result = this.usersService.revokeProject(loginUser, 2, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.USER_NOT_EXIST, result.get(Constants.STATUS));
+
+        // success
+        Mockito.when(this.projectMapper.queryByCode(Mockito.anyLong())).thenReturn(new Project());
+        result = this.usersService.revokeProject(loginUser, 1, projectCode);
+        logger.info(result.toString());
+        Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
+    }
+
+    @Test
     public void testGrantResources() {
         String resourceIds = "100000,120000";
         when(userMapper.selectById(1)).thenReturn(getUser());
@@ -355,7 +427,6 @@ public class UsersServiceTest {
         Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
 
     }
-
 
     @Test
     public void testGrantUDFFunction() {
@@ -398,7 +469,7 @@ public class UsersServiceTest {
 
     }
 
-    private User getLoginUser(){
+    private User getLoginUser() {
         User loginUser = new User();
         loginUser.setId(1);
         loginUser.setUserType(UserType.ADMIN_USER);
@@ -430,7 +501,6 @@ public class UsersServiceTest {
         //check userName
         Assert.assertEquals("userTest0001", tempUser.getUserName());
     }
-
 
     @Test
     public void testQueryAllGeneralUsers() {
@@ -477,7 +547,6 @@ public class UsersServiceTest {
         logger.info(result.toString());
         Assert.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
     }
-
 
     @Test
     public void testAuthorizedUser() {
@@ -534,7 +603,6 @@ public class UsersServiceTest {
             Assert.assertTrue(false);
         }
     }
-
 
     @Test
     public void testActivateUser() {
@@ -618,6 +686,21 @@ public class UsersServiceTest {
         return user;
     }
 
+    /**
+     * Get project
+     * @return
+     */
+    private Project getProject() {
+        Project project = new Project();
+        project.setId(1);
+        project.setCode(1L);
+        project.setUserId(1);
+        project.setName("PJ-001");
+        project.setPerm(7);
+        project.setDefCount(0);
+        project.setInstRunningCount(0);
+        return project;
+    }
 
     /**
      * get user

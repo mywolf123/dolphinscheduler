@@ -61,11 +61,11 @@ DolphinScheduler的工作计划：<a href="https://github.com/apache/dolphinsche
 
 ## 快速试用 Docker
 
-请参考官方文档: [快速试用 Docker 部署](https://dolphinscheduler.apache.org/zh-cn/docs/latest/user_doc/docker-deployment.html)
+请参考官方文档: [快速试用 Docker 部署](http://dolphinscheduler.apache.org/zh-cn/docs/latest/user_doc/guide/installation/docker.html)
 
 ## 快速试用 Kubernetes
 
-请参考官方文档: [快速试用 Kubernetes 部署](https://dolphinscheduler.apache.org/zh-cn/docs/latest/user_doc/kubernetes-deployment.html)
+请参考官方文档: [快速试用 Kubernetes 部署](http://dolphinscheduler.apache.org/zh-cn/docs/latest/user_doc/guide/installation/kubernetes.html)
 
 ## 如何构建
 
@@ -82,7 +82,7 @@ dolphinscheduler-dist/target/apache-dolphinscheduler-${latest.release.version}-s
 
 ## 感谢
 
-Dolphin Scheduler使用了很多优秀的开源项目，比如google的guava、guice、grpc，netty，ali的bonecp，quartz，以及apache的众多开源项目等等，
+Dolphin Scheduler使用了很多优秀的开源项目，比如google的guava、guice、grpc，netty，quartz，以及apache的众多开源项目等等，
 正是由于站在这些开源项目的肩膀上，才有Dolphin Scheduler的诞生的可能。对此我们对使用的所有开源软件表示非常的感谢！我们也希望自己不仅是开源的受益者，也能成为开源的贡献者,也希望对开源有同样热情和信念的伙伴加入进来，一起为开源献出一份力！
 
 ## 获得帮助

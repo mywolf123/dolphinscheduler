@@ -27,6 +27,11 @@
       left: 24px;
       top: 18px;
       font-size: 16px;
+      .helper-link {
+        font-size: 12px;
+        display: inline-block;
+        margin-left: 10px;
+      }
     }
     .go-subtask {
       position: absolute;
@@ -90,6 +95,7 @@
       width: 130px;
       text-align: right;
       margin-right: 8px;
+      flex-shrink: 0;
       >span {
         font-size: 14px;
         color: #777;
@@ -99,6 +105,7 @@
     }
     .cont-box {
       flex: 1;
+      max-width: calc(100% - 138px);
       .label-box {
         width: 100%;
       }

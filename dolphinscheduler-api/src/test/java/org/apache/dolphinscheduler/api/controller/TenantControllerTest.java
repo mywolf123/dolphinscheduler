@@ -17,8 +17,10 @@
 
 package org.apache.dolphinscheduler.api.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,12 +37,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-/**
- * tenant controller test
- */
-public class TenantControllerTest extends AbstractControllerTest{
-
-    private static Logger logger = LoggerFactory.getLogger(TenantControllerTest.class);
+public class TenantControllerTest extends AbstractControllerTest {
+    private static final Logger logger = LoggerFactory.getLogger(TenantControllerTest.class);
 
     @Test
     public void testCreateTenant() throws Exception {
@@ -49,11 +47,11 @@ public class TenantControllerTest extends AbstractControllerTest{
         paramsMap.add("queueId","1");
         paramsMap.add("description","tenant description");
 
-        MvcResult mvcResult = mockMvc.perform(post("/tenant/create")
+        MvcResult mvcResult = mockMvc.perform(post("/tenants/")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isCreated())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -69,11 +67,11 @@ public class TenantControllerTest extends AbstractControllerTest{
         paramsMap.add("searchVal","tenant");
         paramsMap.add("pageSize","30");
 
-        MvcResult mvcResult = mockMvc.perform(get("/tenant/list-paging")
+        MvcResult mvcResult = mockMvc.perform(get("/tenants/")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -89,11 +87,11 @@ public class TenantControllerTest extends AbstractControllerTest{
         paramsMap.add("queueId","1");
         paramsMap.add("description","tenant description");
 
-        MvcResult mvcResult = mockMvc.perform(post("/tenant/update")
+        MvcResult mvcResult = mockMvc.perform(put("/tenants/{id}", 9)
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -102,17 +100,16 @@ public class TenantControllerTest extends AbstractControllerTest{
 
     }
 
-
     @Test
     public void testVerifyTenantCode() throws Exception {
         MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
         paramsMap.add("tenantCode","cxc_test");
 
-        MvcResult mvcResult = mockMvc.perform(get("/tenant/verify-tenant-code")
+        MvcResult mvcResult = mockMvc.perform(get("/tenants/verify-code")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -126,11 +123,11 @@ public class TenantControllerTest extends AbstractControllerTest{
         MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
         paramsMap.add("tenantCode", "hayden");
 
-        MvcResult mvcResult = mockMvc.perform(get("/tenant/verify-tenant-code")
+        MvcResult mvcResult = mockMvc.perform(get("/tenants/verify-code")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -142,10 +139,10 @@ public class TenantControllerTest extends AbstractControllerTest{
     @Test
     public void testQueryTenantlist() throws Exception {
 
-        MvcResult mvcResult = mockMvc.perform(get("/tenant/list")
+        MvcResult mvcResult = mockMvc.perform(get("/tenants/list")
                 .header(SESSION_ID, sessionId))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -159,11 +156,11 @@ public class TenantControllerTest extends AbstractControllerTest{
         MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
         paramsMap.add("id","64");
 
-        MvcResult mvcResult = mockMvc.perform(post("/tenant/delete")
+        MvcResult mvcResult = mockMvc.perform(delete("/tenants/{id}", 64)
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
         Assert.assertEquals(Status.TENANT_NOT_EXIST.getCode(),result.getCode().intValue());

@@ -18,9 +18,10 @@
 
 workDir=`dirname $0`
 workDir=`cd ${workDir};pwd`
-source $workDir/../conf/config/install_config.conf
 
-declare -A workersGroupMap=()
+source ${workDir}/env/install_env.sh
+
+workersGroupMap=()
 
 workersGroup=(${workers//,/ })
 for workerGroup in ${workersGroup[@]}
@@ -52,7 +53,7 @@ ssh -p $sshPort $alertServer  "cd $installPath/; sh bin/dolphinscheduler-daemon.
 apiServersHost=(${apiServers//,/ })
 for apiServer in ${apiServersHost[@]}
 do
-  echo "$apiServer worker server is starting"
+  echo "$apiServer api server is starting"
   ssh -p $sshPort $apiServer  "cd $installPath/; sh bin/dolphinscheduler-daemon.sh start api-server;"
 done
 

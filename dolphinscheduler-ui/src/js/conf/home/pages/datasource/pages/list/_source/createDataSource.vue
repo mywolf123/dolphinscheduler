@@ -21,7 +21,7 @@
         <m-list-box-f>
           <template slot="name"><strong>*</strong>{{$t('Datasource')}}</template>
           <template slot="content" size="small">
-              <el-select style="width: 100%;" v-model="type">
+              <el-select style="width: 100%;" v-model="type" :disabled="this.item.id">
                 <el-option v-for="item in datasourceTypeList" :key="item.value" :value="item.value" :label="item.label">
                 </el-option>
               </el-select>
@@ -56,7 +56,7 @@
             <el-input
                     type="input"
                     v-model="host"
-                    maxlength="60"
+                    maxlength="255"
                     size="small"
                     :placeholder="$t('Please enter IP')">
             </el-input>
@@ -177,8 +177,8 @@
     </div>
     <div class="bottom-p">
       <el-button type="text" ize="mini" @click="_close()"> {{$t('Cancel')}} </el-button>
-      <el-button type="success" size="mini" round @click="_testConnect()" :loading="testLoading">{{testLoading ? 'Loading...' : $t('Test Connect')}}</el-button>
-      <el-button type="primary" size="mini" round :loading="spinnerLoading" @click="_ok()">{{spinnerLoading ? 'Loading...' :item ? `${$t('Edit')}` : `${$t('Submit')}`}} </el-button>
+      <el-button type="success" size="mini" round @click="_testConnect()" :loading="testLoading">{{testLoading ? $t('Loading...') : $t('Test Connect')}}</el-button>
+      <el-button type="primary" size="mini" round :loading="spinnerLoading" @click="_ok()">{{spinnerLoading ? $t('Loading...') :item ? `${$t('Edit')}` : `${$t('Submit')}`}} </el-button>
     </div>
   </div>
 </template>

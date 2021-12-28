@@ -32,14 +32,20 @@ public class TaskExecuteResponseCommand implements Serializable {
     public TaskExecuteResponseCommand() {
     }
 
-    public TaskExecuteResponseCommand(int taskInstanceId) {
+    public TaskExecuteResponseCommand(int taskInstanceId, int processInstanceId) {
         this.taskInstanceId = taskInstanceId;
+        this.processInstanceId = processInstanceId;
     }
 
     /**
      *  task instance id
      */
     private int taskInstanceId;
+
+    /**
+     * process instance id
+     */
+    private  int processInstanceId;
 
     /**
      *  status
@@ -68,10 +74,6 @@ public class TaskExecuteResponseCommand implements Serializable {
      * varPool string
      */
     private String varPool;
-    /**
-     * task return result
-     */
-    private String result;
 
     public void setVarPool(String varPool) {
         this.varPool = varPool;
@@ -144,11 +146,11 @@ public class TaskExecuteResponseCommand implements Serializable {
                 + '}';
     }
 
-    public String getResult() {
-        return result;
+    public int getProcessInstanceId() {
+        return processInstanceId;
     }
 
-    public void setResult(String result) {
-        this.result = result;
+    public void setProcessInstanceId(int processInstanceId) {
+        this.processInstanceId = processInstanceId;
     }
 }

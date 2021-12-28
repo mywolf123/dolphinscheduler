@@ -22,17 +22,19 @@ import org.apache.dolphinscheduler.api.service.DataSourceService;
 import org.apache.dolphinscheduler.api.utils.PageInfo;
 import org.apache.dolphinscheduler.api.utils.Result;
 import org.apache.dolphinscheduler.common.Constants;
-import org.apache.dolphinscheduler.common.datasource.BaseConnectionParam;
-import org.apache.dolphinscheduler.common.datasource.BaseDataSourceParamDTO;
-import org.apache.dolphinscheduler.common.datasource.ConnectionParam;
-import org.apache.dolphinscheduler.common.datasource.DatasourceUtil;
-import org.apache.dolphinscheduler.common.enums.DbType;
 import org.apache.dolphinscheduler.common.utils.JSONUtils;
-import org.apache.dolphinscheduler.common.utils.StringUtils;
 import org.apache.dolphinscheduler.dao.entity.DataSource;
 import org.apache.dolphinscheduler.dao.entity.User;
 import org.apache.dolphinscheduler.dao.mapper.DataSourceMapper;
 import org.apache.dolphinscheduler.dao.mapper.DataSourceUserMapper;
+import org.apache.dolphinscheduler.plugin.datasource.api.datasource.BaseDataSourceParamDTO;
+import org.apache.dolphinscheduler.plugin.datasource.api.plugin.DataSourceClientProvider;
+import org.apache.dolphinscheduler.plugin.datasource.api.utils.DataSourceUtils;
+import org.apache.dolphinscheduler.spi.datasource.BaseConnectionParam;
+import org.apache.dolphinscheduler.spi.datasource.ConnectionParam;
+import org.apache.dolphinscheduler.spi.enums.DbType;
+
+import org.apache.commons.lang.StringUtils;
 
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -77,7 +79,7 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
      */
     @Override
     public Result<Object> createDataSource(User loginUser, BaseDataSourceParamDTO datasourceParam) {
-        DatasourceUtil.checkDatasourceParam(datasourceParam);
+        DataSourceUtils.checkDatasourceParam(datasourceParam);
         Result<Object> result = new Result<>();
         // check name can use or not
         if (checkName(datasourceParam.getName())) {
@@ -85,7 +87,7 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
             return result;
         }
         // check connect
-        ConnectionParam connectionParam = DatasourceUtil.buildConnectionParams(datasourceParam);
+        ConnectionParam connectionParam = DataSourceUtils.buildConnectionParams(datasourceParam);
         Result<Object> isConnection = checkConnection(datasourceParam.getType(), connectionParam);
         if (Status.SUCCESS.getCode() != isConnection.getCode()) {
             putMsg(result, Status.DATASOURCE_CONNECT_FAILED);
@@ -119,16 +121,12 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
      * updateProcessInstance datasource
      *
      * @param loginUser login user
-     * @param name data source name
-     * @param desc data source description
-     * @param type data source type
-     * @param parameter datasource parameters
      * @param id data source id
      * @return update result code
      */
     @Override
     public Result<Object> updateDataSource(int id, User loginUser, BaseDataSourceParamDTO dataSourceParam) {
-        DatasourceUtil.checkDatasourceParam(dataSourceParam);
+        DataSourceUtils.checkDatasourceParam(dataSourceParam);
         Result<Object> result = new Result<>();
         // determine whether the data source exists
         DataSource dataSource = dataSourceMapper.selectById(id);
@@ -148,7 +146,7 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
             return result;
         }
         //check password，if the password is not updated, set to the old password.
-        BaseConnectionParam connectionParam = (BaseConnectionParam) DatasourceUtil.buildConnectionParams(dataSourceParam);
+        BaseConnectionParam connectionParam = (BaseConnectionParam) DataSourceUtils.buildConnectionParams(dataSourceParam);
         String password = connectionParam.getPassword();
         if (StringUtils.isBlank(password)) {
             String oldConnectionParams = dataSource.getConnectionParams();
@@ -157,14 +155,14 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
         }
 
         Result<Object> isConnection = checkConnection(dataSource.getType(), connectionParam);
-        if (Status.SUCCESS.getCode() != isConnection.getCode()) {
-            return result;
+        if (isConnection.isFailed()) {
+            return isConnection;
         }
 
         Date now = new Date();
 
-        dataSource.setName(dataSource.getName().trim());
-        dataSource.setNote(dataSource.getNote());
+        dataSource.setName(dataSourceParam.getName().trim());
+        dataSource.setNote(dataSourceParam.getNote());
         dataSource.setUserName(loginUser.getUserName());
         dataSource.setType(dataSource.getType());
         dataSource.setConnectionParams(JSONUtils.toJsonString(connectionParam));
@@ -200,7 +198,7 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
             return result;
         }
         // type
-        BaseDataSourceParamDTO baseDataSourceParamDTO = DatasourceUtil.buildDatasourceParamDTO(
+        BaseDataSourceParamDTO baseDataSourceParamDTO = DataSourceUtils.buildDatasourceParamDTO(
                 dataSource.getType(), dataSource.getConnectionParams());
         baseDataSourceParamDTO.setId(dataSource.getId());
         baseDataSourceParamDTO.setName(dataSource.getName());
@@ -221,8 +219,8 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
      * @return data source list page
      */
     @Override
-    public Map<String, Object> queryDataSourceListPaging(User loginUser, String searchVal, Integer pageNo, Integer pageSize) {
-        Map<String, Object> result = new HashMap<>();
+    public Result queryDataSourceListPaging(User loginUser, String searchVal, Integer pageNo, Integer pageSize) {
+        Result result = new Result();
         IPage<DataSource> dataSourceList;
         Page<DataSource> dataSourcePage = new Page<>(pageNo, pageSize);
 
@@ -235,9 +233,9 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
         List<DataSource> dataSources = dataSourceList != null ? dataSourceList.getRecords() : new ArrayList<>();
         handlePasswd(dataSources);
         PageInfo<DataSource> pageInfo = new PageInfo<>(pageNo, pageSize);
-        pageInfo.setTotalCount((int) (dataSourceList != null ? dataSourceList.getTotal() : 0L));
-        pageInfo.setLists(dataSources);
-        result.put(Constants.DATA_LIST, pageInfo);
+        pageInfo.setTotal((int) (dataSourceList != null ? dataSourceList.getTotal() : 0L));
+        pageInfo.setTotalList(dataSources);
+        result.setData(pageInfo);
         putMsg(result, Status.SUCCESS);
 
         return result;
@@ -312,13 +310,14 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
      * check connection
      *
      * @param type data source type
-     * @param parameter data source parameters
+     * @param connectionParam connectionParam
+     * @return true if connect successfully, otherwise false
      * @return true if connect successfully, otherwise false
      */
     @Override
     public Result<Object> checkConnection(DbType type, ConnectionParam connectionParam) {
         Result<Object> result = new Result<>();
-        try (Connection connection = DatasourceUtil.getConnection(type, connectionParam)) {
+        try (Connection connection = DataSourceClientProvider.getInstance().getConnection(type, connectionParam)) {
             if (connection == null) {
                 putMsg(result, Status.CONNECTION_TEST_FAILURE);
                 return result;
@@ -345,7 +344,7 @@ public class DataSourceServiceImpl extends BaseServiceImpl implements DataSource
             putMsg(result, Status.RESOURCE_NOT_EXIST);
             return result;
         }
-        return checkConnection(dataSource.getType(), DatasourceUtil.buildConnectionParams(dataSource.getType(), dataSource.getConnectionParams()));
+        return checkConnection(dataSource.getType(), DataSourceUtils.buildConnectionParams(dataSource.getType(), dataSource.getConnectionParams()));
     }
 
     /**

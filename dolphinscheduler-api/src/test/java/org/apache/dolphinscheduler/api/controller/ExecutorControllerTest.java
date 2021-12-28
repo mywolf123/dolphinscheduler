@@ -23,16 +23,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.apache.dolphinscheduler.api.enums.ExecuteType;
 import org.apache.dolphinscheduler.api.enums.Status;
+import org.apache.dolphinscheduler.api.service.ExecutorService;
 import org.apache.dolphinscheduler.api.utils.Result;
+import org.apache.dolphinscheduler.common.Constants;
 import org.apache.dolphinscheduler.common.enums.FailureStrategy;
 import org.apache.dolphinscheduler.common.enums.WarningType;
 import org.apache.dolphinscheduler.common.utils.JSONUtils;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.LinkedMultiValueMap;
@@ -42,8 +50,10 @@ import org.springframework.util.MultiValueMap;
  * executor controller test
  */
 public class ExecutorControllerTest extends AbstractControllerTest {
+    private static final Logger logger = LoggerFactory.getLogger(ExecutorControllerTest.class);
 
-    private static Logger logger = LoggerFactory.getLogger(ExecutorControllerTest.class);
+    @MockBean(name = "executorServiceImpl")
+    private ExecutorService executorService;
 
     @Ignore
     @Test
@@ -68,10 +78,10 @@ public class ExecutorControllerTest extends AbstractControllerTest {
             .header("sessionId", sessionId)
             .params(paramsMap))
             .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
-        Assert.assertEquals(Status.SUCCESS.getCode(), result.getCode().intValue());
+        Assert.assertTrue(result != null && result.isSuccess());
         logger.info(mvcResult.getResponse().getContentAsString());
     }
 
@@ -86,24 +96,27 @@ public class ExecutorControllerTest extends AbstractControllerTest {
             .header("sessionId", sessionId)
             .params(paramsMap))
             .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
-        Assert.assertEquals(Status.SUCCESS.getCode(), result.getCode().intValue());
+        Assert.assertTrue(result != null && result.isSuccess());
         logger.info(mvcResult.getResponse().getContentAsString());
     }
 
     @Test
     public void testStartCheckProcessDefinition() throws Exception {
+        Map<String, Object> mockResult = new HashMap<>();
+        mockResult.put(Constants.STATUS, Status.SUCCESS);
+        PowerMockito.when(executorService.startCheckByProcessDefinedCode(Mockito.anyLong())).thenReturn(mockResult);
 
-        MvcResult mvcResult = mockMvc.perform(post("/projects/{projectName}/executors/start-check", "cxc_1113")
+        MvcResult mvcResult = mockMvc.perform(post("/projects/1/executors/start-check")
             .header(SESSION_ID, sessionId)
-            .param("processDefinitionId", "40"))
+            .param("processDefinitionCode", "40"))
             .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
-        Assert.assertEquals(Status.SUCCESS.getCode(), result.getCode().intValue());
+        Assert.assertTrue(result != null && result.isSuccess());
         logger.info(mvcResult.getResponse().getContentAsString());
     }
 

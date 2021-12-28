@@ -29,7 +29,20 @@
         select
         <include refid="baseSql"/>
         from t_ds_project
-        where code = #{code}
+        where code = #{projectCode}
+    </select>
+
+    <select id="queryByCodes" resultType="org.apache.dolphinscheduler.dao.entity.Project">
+        select
+        <include refid="baseSql"/>
+        from t_ds_project
+        where 1 = 1
+        <if test="codes != null and codes.size() != 0">
+            and code in
+            <foreach collection="codes" index="index" item="i" open="(" separator="," close=")">
+                #{i}
+            </foreach>
+        </if>
     </select>
 
     <select id="queryDetailByCode" resultType="org.apache.dolphinscheduler.dao.entity.Project">
@@ -88,7 +101,9 @@
             )
         </if>
         <if test="searchName!=null and searchName != ''">
-            and p.name like concat('%', #{searchName}, '%')
+            AND (p.name LIKE concat('%', #{searchName}, '%')
+            OR p.description LIKE concat('%', #{searchName}, '%')
+            )
         </if>
         order by p.create_time desc
     </select>

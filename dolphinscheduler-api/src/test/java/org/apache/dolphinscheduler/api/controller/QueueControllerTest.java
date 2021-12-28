@@ -19,6 +19,7 @@ package org.apache.dolphinscheduler.api.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,18 +40,17 @@ import org.springframework.util.MultiValueMap;
  * queue controller test
  */
 public class QueueControllerTest extends AbstractControllerTest {
-
-    private static Logger logger = LoggerFactory.getLogger(QueueControllerTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(QueueControllerTest.class);
 
     private static final String QUEUE_CREATE_STRING = "queue1";
 
     @Test
     public void testQueryList() throws Exception {
 
-        MvcResult mvcResult = mockMvc.perform(get("/queue/list")
+        MvcResult mvcResult = mockMvc.perform(get("/queues/list")
                 .header(SESSION_ID, sessionId))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
@@ -66,11 +66,11 @@ public class QueueControllerTest extends AbstractControllerTest {
         paramsMap.add("pageNo","1");
         paramsMap.add("pageSize","20");
 
-        MvcResult mvcResult = mockMvc.perform(get("/queue/list-paging")
+        MvcResult mvcResult = mockMvc.perform(get("/queues")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
         Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
@@ -85,11 +85,11 @@ public class QueueControllerTest extends AbstractControllerTest {
         paramsMap.add("queue", QUEUE_CREATE_STRING);
         paramsMap.add("queueName","root.queue1");
 
-        MvcResult mvcResult = mockMvc.perform(post("/queue/create")
+        MvcResult mvcResult = mockMvc.perform(post("/queues")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isCreated())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
         Assert.assertEquals(Status.SUCCESS.getCode(), result.getCode().intValue());
@@ -104,11 +104,11 @@ public class QueueControllerTest extends AbstractControllerTest {
         paramsMap.add("queue","queue2");
         paramsMap.add("queueName","root.queue2");
 
-        MvcResult mvcResult = mockMvc.perform(post("/queue/update")
+        MvcResult mvcResult = mockMvc.perform(put("/queues/{id}", 1)
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isCreated())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
         Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
@@ -123,11 +123,11 @@ public class QueueControllerTest extends AbstractControllerTest {
         paramsMap.add("queue",QUEUE_CREATE_STRING);
         paramsMap.add("queueName","queue.name");
 
-        MvcResult mvcResult = mockMvc.perform(post("/queue/verify-queue")
+        MvcResult mvcResult = mockMvc.perform(post("/queues/verify")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
         Assert.assertEquals(Status.QUEUE_VALUE_EXIST.getCode(),result.getCode().intValue());
@@ -137,11 +137,11 @@ public class QueueControllerTest extends AbstractControllerTest {
         paramsMap.add("queue","ait123");
         paramsMap.add("queueName","aitName");
 
-        mvcResult = mockMvc.perform(post("/queue/verify-queue")
+        mvcResult = mockMvc.perform(post("/queues/verify")
                 .header(SESSION_ID, sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
         Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());

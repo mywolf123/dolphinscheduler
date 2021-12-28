@@ -17,14 +17,9 @@
 
 package org.apache.dolphinscheduler.server.registry;
 
-import static org.apache.dolphinscheduler.remote.utils.Constants.COMMA;
+import org.apache.dolphinscheduler.common.utils.HeartBeat;
+import org.apache.dolphinscheduler.service.registry.RegistryClient;
 
-import org.apache.dolphinscheduler.common.Constants;
-import org.apache.dolphinscheduler.common.IStoppable;
-import org.apache.dolphinscheduler.common.utils.DateUtils;
-import org.apache.dolphinscheduler.common.utils.OSUtils;
-
-import java.util.Date;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -37,45 +32,43 @@ public class HeartBeatTask implements Runnable {
 
     private final Logger logger = LoggerFactory.getLogger(HeartBeatTask.class);
 
-    private String startTime;
-    private double maxCpuloadAvg;
-    private double reservedMemory;
-    private int hostWeight; // worker host weight
-    private Set<String> heartBeatPaths;
-    private String serverType;
-    private ZookeeperRegistryCenter zookeeperRegistryCenter;
+    private final Set<String> heartBeatPaths;
+    private final RegistryClient registryClient;
+    private int workerWaitingTaskCount;
+    private final String serverType;
+    private final HeartBeat heartBeat;
 
-    // server stop or not
-    protected IStoppable stoppable = null;
-
-    public HeartBeatTask(String startTime,
+    public HeartBeatTask(long startupTime,
                          double maxCpuloadAvg,
                          double reservedMemory,
                          Set<String> heartBeatPaths,
                          String serverType,
-                         ZookeeperRegistryCenter zookeeperRegistryCenter) {
-        this.startTime = startTime;
-        this.maxCpuloadAvg = maxCpuloadAvg;
-        this.reservedMemory = reservedMemory;
+                         RegistryClient registryClient) {
         this.heartBeatPaths = heartBeatPaths;
+        this.registryClient = registryClient;
         this.serverType = serverType;
-        this.zookeeperRegistryCenter = zookeeperRegistryCenter;
+        this.heartBeat = new HeartBeat(startupTime, maxCpuloadAvg, reservedMemory);
     }
 
-    public HeartBeatTask(String startTime,
+    public HeartBeatTask(long startupTime,
                          double maxCpuloadAvg,
                          double reservedMemory,
                          int hostWeight,
                          Set<String> heartBeatPaths,
                          String serverType,
-                         ZookeeperRegistryCenter zookeeperRegistryCenter) {
-        this.startTime = startTime;
-        this.maxCpuloadAvg = maxCpuloadAvg;
-        this.reservedMemory = reservedMemory;
-        this.hostWeight = hostWeight;
+                         RegistryClient registryClient,
+                         int workerThreadCount,
+                         int workerWaitingTaskCount
+    ) {
         this.heartBeatPaths = heartBeatPaths;
+        this.registryClient = registryClient;
+        this.workerWaitingTaskCount = workerWaitingTaskCount;
         this.serverType = serverType;
-        this.zookeeperRegistryCenter = zookeeperRegistryCenter;
+        this.heartBeat = new HeartBeat(startupTime, maxCpuloadAvg, reservedMemory, hostWeight, workerThreadCount);
+    }
+
+    public String getHeartBeatInfo() {
+        return this.heartBeat.encodeHeartBeat();
     }
 
     @Override
@@ -83,52 +76,20 @@ public class HeartBeatTask implements Runnable {
         try {
             // check dead or not in zookeeper
             for (String heartBeatPath : heartBeatPaths) {
-                if (zookeeperRegistryCenter.checkIsDeadServer(heartBeatPath, serverType)) {
-                    zookeeperRegistryCenter.getStoppable().stop("i was judged to death, release resources and stop myself");
+                if (registryClient.checkIsDeadServer(heartBeatPath, serverType)) {
+                    registryClient.getStoppable().stop("i was judged to death, release resources and stop myself");
                     return;
                 }
             }
 
-            double loadAverage = OSUtils.loadAverage();
-            double availablePhysicalMemorySize = OSUtils.availablePhysicalMemorySize();
-            int status = Constants.NORMAL_NODE_STATUS;
-            if (loadAverage > maxCpuloadAvg || availablePhysicalMemorySize < reservedMemory) {
-                logger.warn("current cpu load average {} is too high or available memory {}G is too low, under max.cpuload.avg={} and reserved.memory={}G",
-                        loadAverage, availablePhysicalMemorySize, maxCpuloadAvg, reservedMemory);
-                status = Constants.ABNORMAL_NODE_STATUS;
-            }
-
-            StringBuilder builder = new StringBuilder(100);
-            builder.append(OSUtils.cpuUsage()).append(COMMA);
-            builder.append(OSUtils.memoryUsage()).append(COMMA);
-            builder.append(OSUtils.loadAverage()).append(COMMA);
-            builder.append(OSUtils.availablePhysicalMemorySize()).append(Constants.COMMA);
-            builder.append(maxCpuloadAvg).append(Constants.COMMA);
-            builder.append(reservedMemory).append(Constants.COMMA);
-            builder.append(startTime).append(Constants.COMMA);
-            builder.append(DateUtils.dateToString(new Date())).append(Constants.COMMA);
-            builder.append(status).append(COMMA);
-            // save process id
-            builder.append(OSUtils.getProcessID());
-            // worker host weight
-            if (Constants.WORKER_TYPE.equals(serverType)) {
-                builder.append(Constants.COMMA).append(hostWeight);
-            }
+            // update waiting task count
+            heartBeat.setWorkerWaitingTaskCount(workerWaitingTaskCount);
 
             for (String heartBeatPath : heartBeatPaths) {
-                zookeeperRegistryCenter.getRegisterOperator().update(heartBeatPath, builder.toString());
+                registryClient.persistEphemeral(heartBeatPath, heartBeat.encodeHeartBeat());
             }
         } catch (Throwable ex) {
             logger.error("error write heartbeat info", ex);
         }
-    }
-
-    /**
-     * for stop server
-     *
-     * @param serverStoppable server stoppable interface
-     */
-    public void setStoppable(IStoppable serverStoppable) {
-        this.stoppable = serverStoppable;
     }
 }

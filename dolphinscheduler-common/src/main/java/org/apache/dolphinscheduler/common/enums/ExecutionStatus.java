@@ -42,6 +42,7 @@ public enum ExecutionStatus {
      * 11 waiting depend node complete
      * 12 delay execution
      * 13 forced success
+     * 14 serial wait
      */
     SUBMITTED_SUCCESS(0, "submit success"),
     RUNNING_EXECUTION(1, "running"),
@@ -53,10 +54,11 @@ public enum ExecutionStatus {
     SUCCESS(7, "success"),
     NEED_FAULT_TOLERANCE(8, "need fault tolerance"),
     KILL(9, "kill"),
-    WAITTING_THREAD(10, "waiting thread"),
-    WAITTING_DEPEND(11, "waiting depend node complete"),
+    WAITING_THREAD(10, "waiting thread"),
+    WAITING_DEPEND(11, "waiting depend node complete"),
     DELAY_EXECUTION(12, "delay execution"),
-    FORCED_SUCCESS(13, "forced success");
+    FORCED_SUCCESS(13, "forced success"),
+    SERIAL_WAIT(14, "serial wait");
 
     ExecutionStatus(int code, String descp) {
         this.code = code;
@@ -109,7 +111,7 @@ public enum ExecutionStatus {
      * @return status
      */
     public boolean typeIsWaitingThread() {
-        return this == WAITTING_THREAD;
+        return this == WAITING_THREAD;
     }
 
     /**
@@ -136,7 +138,7 @@ public enum ExecutionStatus {
      * @return status
      */
     public boolean typeIsRunning() {
-        return this == RUNNING_EXECUTION || this == WAITTING_DEPEND || this == DELAY_EXECUTION;
+        return this == RUNNING_EXECUTION || this == WAITING_DEPEND || this == DELAY_EXECUTION;
     }
 
     /**

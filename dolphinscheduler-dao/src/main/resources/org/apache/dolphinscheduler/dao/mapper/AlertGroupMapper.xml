@@ -32,6 +32,7 @@
         </if>
         order by update_time desc
     </select>
+
     <select id="queryByGroupName" resultType="org.apache.dolphinscheduler.dao.entity.AlertGroup">
         select
         <include refid="baseSql"/>
